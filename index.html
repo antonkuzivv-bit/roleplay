@@ -49,7 +49,7 @@ textarea{min-height:90px;resize:vertical}
   <header><h1>Персонажи</h1><button class="ghost" onclick="toggleSettings()">Ключ</button></header>
   <div class="content">
     <div class="form" id="settings" hidden>
-      <h2>API-ключ Claude</h2>
+      <h2>API-ключ Groq</h2>
       <input id="apikey" type="password" placeholder="sk-ant-...">
       <button onclick="saveKey()">Сохранить ключ</button>
       <p class="muted">Ключ хранится только в этом телефоне.</p>
@@ -191,26 +191,24 @@ function buildPrompt(c){
 async function getReply(c, hist){
   const key = localStorage.getItem("rp_apikey");
   if (!key) return "Сначала введи API-ключ: кнопка «Ключ» на экране персонажей.";
-  const messages = hist.map(m => ({role: m.role, content: m.text}));
+  const messages = [{role: "system", content: buildPrompt(c)}]
+    .concat(hist.map(m => ({role: m.role, content: m.text})));
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true"
+        "authorization": "Bearer " + key
       },
       body: JSON.stringify({
-        model: "claude-haiku-5-5",
+        model: "llama-3.3-70b-versatile",
         max_tokens: 600,
-        system: buildPrompt(c),
         messages
       })
     });
     const data = await res.json();
     if (!res.ok) return "Ошибка: " + ((data.error && data.error.message) || res.status);
-    return data.content.map(i => i.text || "").join("").trim() || "(пустой ответ)";
+    return (data.choices[0].message.content || "").trim() || "(пустой ответ)";
   } catch (e) {
     return "Не удалось связаться с моделью. Проверь интернет.";
   }
