@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#5b5bd6">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Ролевой чат</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#f5f5f7;--card:#fff;--text:#111;--muted:#777;--accent:#5b5bd6;--theirs:#e9e9ee}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111;--card:#1c1c1e;--text:#f2f2f2;--muted:#999;--theirs:#2c2c2e}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{font-family:-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:16px}
+.screen{height:100%;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--card);border-bottom:1px solid #0001}
+header h1{font-size:18px;margin:0;flex:1}
+button{font:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--accent);color:#fff;cursor:pointer}
+button.ghost{background:none;color:var(--accent);padding:6px}
+button.del{background:none;color:var(--muted);padding:6px 8px}
+input,textarea{font:inherit;width:100%;padding:10px;border:1px solid #0002;border-radius:10px;background:var(--card);color:var(--text)}
+textarea{min-height:90px;resize:vertical}
+.content{flex:1;overflow:auto;padding:14px;-webkit-overflow-scrolling:touch}
+.muted{color:var(--muted);font-size:14px}
+.card{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:14px;padding:10px;margin-bottom:10px;cursor:pointer}
+.card .info{flex:1;min-width:0;display:flex;flex-direction:column}
+.card .info span{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.avatar{width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none;background:var(--accent);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600}
+.avatar.sm{width:36px;height:36px;font-size:15px}
+.form{background:var(--card);border-radius:14px;padding:14px;margin-top:18px;display:flex;flex-direction:column;gap:10px}
+.form h2{font-size:16px;margin:0}
+#preview{width:90px;height:90px;border-radius:12px;object-fit:cover}
+.msg{max-width:80%;padding:10px 13px;border-radius:16px;margin-bottom:8px;white-space:pre-wrap;word-wrap:break-word;line-height:1.4}
+.msg.user{margin-left:auto;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.msg.assistant{background:var(--theirs);border-bottom-left-radius:4px}
+.inputbar{display:flex;gap:8px;padding:10px 12px;background:var(--card);border-top:1px solid #0001}
+.inputbar textarea{min-height:44px;max-height:120px;flex:1}
+</style>
+</head>
+<body>
+
+<div id="list" class="screen">
+  <header><h1>Персонажи</h1><button class="ghost" onclick="toggleSettings()">Ключ</button></header>
+  <div class="content">
+    <div class="form" id="settings" hidden>
+      <h2>API-ключ Groq</h2>
+      <input id="apikey" type="password" placeholder="sk-ant-...">
+      <button onclick="saveKey()">Сохранить ключ</button>
+      <p class="muted">Ключ хранится только в этом телефоне.</p>
+    </div>
+    <div id="cards"></div>
+    <div class="form">
+      <h2>Новый персонаж</h2>
+      <input id="name" placeholder="Имя">
+      <textarea id="traits" placeholder="Описание характера: как говорит, что любит, как реагирует"></textarea>
+      <input id="photo" type="file" accept="image/*">
+      <img id="preview" hidden alt="">
+      <button onclick="addChar()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<div id="chat" class="screen" hidden>
+  <header>
+    <button class="ghost" onclick="show('list')">‹ Назад</button>
+    <span id="cavatar"></span>
+    <h1 id="cname"></h1>
+  </header>
+  <div class="content" id="msgs"></div>
+  <div class="inputbar">
+    <textarea id="input" placeholder="Сообщение" rows="1"></textarea>
+    <button id="sendBtn" onclick="sendMsg()">→</button>
+  </div>
+</div>
+
+<script>
+const KEY = "rp_v1";
+let state = load();
+let view = "list", cur = null, pendingPhoto = "", busy = false;
+
+function load(){
+  try { return JSON.parse(localStorage.getItem(KEY)) || {characters:[], chats:{}}; }
+  catch(e){ return {characters:[], chats:{}}; }
+}
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify(state)); }
+  catch(e){ alert("Не удалось сохранить: мало места в браузере. Удали часть персонажей с фото."); }
+}
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function newId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function avatar(c, cls){
+  if (c.photo) return `<img class="avatar ${cls||''}" src="${c.photo}" alt="">`;
+  return `<div class="avatar ${cls||''}">${esc(c.name.charAt(0).toUpperCase())}</div>`;
+}
+
+// Сжимаем фото, чтобы оно не занимало много места в хранилище
+function compress(file){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 384, s = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        res(c.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = rej;
+      img.src = r.result;
+    };
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+$("photo").onchange = async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  pendingPhoto = await compress(f);
+  $("preview").src = pendingPhoto;
+  $("preview").hidden = false;
+};
+
+function show(v, id){
+  view = v; cur = id || null;
+  $("list").hidden = v !== "list";
+  $("chat").hidden = v !== "chat";
+  if (v === "list") renderList(); else renderChat();
+}
+
+function renderList(){
+  $("cards").innerHTML = state.characters.length
+    ? state.characters.map(c => `
+      <div class="card" onclick="show('chat','${c.id}')">
+        ${avatar(c)}
+        <div class="info"><b>${esc(c.name)}</b><span>${esc(c.traits)}</span></div>
+        <button class="del" onclick="event.stopPropagation();removeChar('${c.id}')">✕</button>
+      </div>`).join("")
+    : '<p class="muted">Пока нет персонажей. Создай первого ниже.</p>';
+}
+
+function addChar(){
+  const name = $("name").value.trim(), traits = $("traits").value.trim();
+  if (!name || !traits){ alert("Заполни имя и описание характера"); return; }
+  const c = {id: newId(), name, traits, photo: pendingPhoto};
+  state.characters.push(c);
+  state.chats[c.id] = [];
+  save();
+  $("name").value = ""; $("traits").value = ""; $("photo").value = "";
+  pendingPhoto = ""; $("preview").hidden = true; $("preview").removeAttribute("src");
+  renderList();
+}
+
+function removeChar(id){
+  const c = state.characters.find(x => x.id === id);
+  if (!c || !confirm(`Удалить «${c.name}» и всю переписку?`)) return;
+  state.characters = state.characters.filter(x => x.id !== id);
+  delete state.chats[id];
+  save();
+  renderList();
+}
+
+function renderChat(){
+  const c = state.characters.find(x => x.id === cur);
+  if (!c){ show("list"); return; }
+  $("cavatar").innerHTML = avatar(c, "sm");
+  $("cname").textContent = c.name;
+  const msgs = state.chats[c.id] || [];
+  $("msgs").innerHTML = msgs.length
+    ? msgs.map(m => `<div class="msg ${m.role}">${esc(m.text)}</div>`).join("")
+    : '<p class="muted">Напиши первое сообщение.</p>';
+  $("msgs").scrollTop = $("msgs").scrollHeight;
+}
+
+// Системная инструкция из описания характера. Пригодится при подключении модели.
+function buildPrompt(c){
+  return `Ты играешь роль персонажа по имени ${c.name}. Описание характера: ${c.traits}. ` +
+         `Всегда оставайся в роли, говори от первого лица и сохраняй характер из описания.`;
+}
+
+// ЗАГЛУШКА. Сюда подключим вызов модели: системная инструкция = buildPrompt(c), история = hist.
+async function getReply(c, hist){
+  const key = localStorage.getItem("rp_apikey");
+  if (!key) return "Сначала введи API-ключ: кнопка «Ключ» на экране персонажей.";
+  const messages = [{role: "system", content: buildPrompt(c)}]
+    .concat(hist.map(m => ({role: m.role, content: m.text})));
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "authorization": "Bearer " + key
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        max_tokens: 600,
+        messages
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) return "Ошибка: " + ((data.error && data.error.message) || res.status);
+    return (data.choices[0].message.content || "").trim() || "(пустой ответ)";
+  } catch (e) {
+    return "Не удалось связаться с моделью. Проверь интернет.";
+  }
+}
+
+async function sendMsg(){
+  if (busy) return;
+  const text = $("input").value.trim();
+  const c = state.characters.find(x => x.id === cur);
+  if (!text || !c) return;
+  busy = true; $("sendBtn").disabled = true;
+  const hist = state.chats[c.id];
+  hist.push({role: "user", text});
+  $("input").value = "";
+  save(); renderChat();
+  try {
+    const reply = await getReply(c, hist.slice());
+    hist.push({role: "assistant", text: reply});
+    save();
+  } finally {
+    busy = false; $("sendBtn").disabled = false;
+    if (cur === c.id) renderChat();
+  }
+}
+
+show("list");
+function toggleSettings(){
+  const s = $("settings");
+  s.hidden = !s.hidden;
+  $("apikey").value = localStorage.getItem("rp_apikey") || "";
+}
+function saveKey(){
+  const k = $("apikey").value.trim();
+  if (!k){ alert("Введи ключ"); return; }
+  localStorage.setItem("rp_apikey", k);
+  alert("Ключ сохранён");
+  $("settings").hidden = true;
+}
+</script>
+</body>
+</html>
