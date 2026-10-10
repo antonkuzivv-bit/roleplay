@@ -264,7 +264,7 @@ async function getReply(c, hist){
   const key = checkKey();
   if (key.error) return "⚠ " + key.error;
   const messages = [{role: "system", content: buildPrompt(c)}]
-    .concat(hist.map(m => ({role: m.role, content: m.text})));
+    .concat(hist.filter(m => !m.text.startsWith("⚠")).map(m => ({role: m.role, content: m.text})));
   try {
     return await callGroq(key.value, messages, 400);
   } catch (e) {
@@ -322,11 +322,13 @@ async function testKey(){
     if (!res.ok) throw new Error((data.error && data.error.message) || ("код ошибки " + res.status));
 
     const ids = (data.data || []).map(m => m.id);
-    const chatIds = ids.filter(id => !/whisper|guard|tts|embed|vision/i.test(id));
-    const preferred = chatIds.find(id => /llama/i.test(id) && /instant|versatile|scout|70b|8b/i.test(id))
+    const bad = /whisper|guard|tts|embed|vision|orpheus|canopy|arabic|prompt|safeguard/i;
+    const good = /llama|gpt-oss|qwen|gemma|mixtral/i;
+    const chatIds = ids.filter(id => good.test(id) && !bad.test(id));
+    const preferred = chatIds.find(id => /llama-3\.1-8b|llama-3\.3-70b|llama-4/i.test(id))
       || chatIds.find(id => /llama/i.test(id))
       || chatIds[0];
-    if (!preferred) throw new Error("на ключе нет доступных чат-моделей");
+    if (!preferred) throw new Error("не нашёл подходящей текстовой модели на ключе. Пришли скриншот этой кнопки");
 
     db.model = preferred;
     save();
