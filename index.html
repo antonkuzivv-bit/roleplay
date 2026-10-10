@@ -284,7 +284,7 @@ async function callGroq(key, messages, maxTokens){
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {"Content-Type": "application/json", "Authorization": "Bearer " + key},
-    body: JSON.stringify({model: MODEL, messages, max_tokens: maxTokens})
+    body: JSON.stringify({model: db.model || MODEL, messages, max_tokens: maxTokens})
   });
   let data = {};
   try { data = await res.json(); } catch (e) {}
@@ -312,10 +312,25 @@ function saveKey(){
 async function testKey(){
   const key = checkKey();
   if (key.error){ $("status").textContent = "⚠ " + key.error; return; }
-  $("status").textContent = "Проверяю...";
+  $("status").textContent = "Проверяю и ищу доступную модель...";
   try {
-    const answer = await callGroq(key.value, [{role: "user", content: "Ответь одним словом: работает"}], 10);
-    $("status").textContent = "✅ Ключ работает. Ответ модели: " + answer;
+    const res = await fetch("https://api.groq.com/openai/v1/models", {
+      headers: {"Authorization": "Bearer " + key.value}
+    });
+    let data = {};
+    try { data = await res.json(); } catch (e) {}
+    if (!res.ok) throw new Error((data.error && data.error.message) || ("код ошибки " + res.status));
+
+    const ids = (data.data || []).map(m => m.id);
+    const chatIds = ids.filter(id => !/whisper|guard|tts|embed|vision/i.test(id));
+    const preferred = chatIds.find(id => /llama/i.test(id) && /instant|versatile|scout|70b|8b/i.test(id))
+      || chatIds.find(id => /llama/i.test(id))
+      || chatIds[0];
+    if (!preferred) throw new Error("на ключе нет доступных чат-моделей");
+
+    db.model = preferred;
+    save();
+    $("status").textContent = "✅ Ключ работает. Выбрана модель: " + preferred + ". Можно писать персонажу.";
   } catch (e) {
     $("status").textContent = "⚠ Ошибка: " + e.message;
   }
