@@ -3,252 +3,325 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#5b5bd6">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Ролевой чат</title>
 <style>
-:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
-  --bg:#f5f5f7;--card:#fff;--text:#111;--muted:#777;--accent:#5b5bd6;--theirs:#e9e9ee}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111;--card:#1c1c1e;--text:#f2f2f2;--muted:#999;--theirs:#2c2c2e}}
+:root{--bg:#f4f4f7;--card:#fff;--text:#161616;--muted:#7a7a80;--accent:#5b5bd6;--theirs:#e8e8ee;--line:#0001}
+@media (prefers-color-scheme:dark){:root{--bg:#121214;--card:#1d1d20;--text:#f2f2f4;--muted:#9a9aa2;--theirs:#2a2a2f;--line:#fff1}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%;margin:0}
-body{font-family:-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:16px}
+body{font-family:-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:16px;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 .screen{height:100%;display:flex;flex-direction:column}
-header{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--card);border-bottom:1px solid #0001}
-header h1{font-size:18px;margin:0;flex:1}
-button{font:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--accent);color:#fff;cursor:pointer}
-button.ghost{background:none;color:var(--accent);padding:6px}
-button.del{background:none;color:var(--muted);padding:6px 8px}
-input,textarea{font:inherit;width:100%;padding:10px;border:1px solid #0002;border-radius:10px;background:var(--card);color:var(--text)}
+.bar{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--card);border-bottom:1px solid var(--line)}
+.bar h1{font-size:18px;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scroll{flex:1;overflow:auto;padding:14px;-webkit-overflow-scrolling:touch}
+button{font:inherit;border:0;border-radius:12px;padding:11px 16px;background:var(--accent);color:#fff;cursor:pointer}
+button:disabled{opacity:.5}
+button.ghost{background:none;color:var(--accent);padding:8px}
+button.wide{width:100%;margin-top:6px}
+button.small{padding:6px 10px;font-size:14px}
+input,textarea{font:inherit;width:100%;padding:11px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--text)}
 textarea{min-height:90px;resize:vertical}
-.content{flex:1;overflow:auto;padding:14px;-webkit-overflow-scrolling:touch}
 .muted{color:var(--muted);font-size:14px}
-.card{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:14px;padding:10px;margin-bottom:10px;cursor:pointer}
+.center{text-align:center;margin-top:40px}
+.card{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:16px;padding:10px;margin-bottom:10px;cursor:pointer}
 .card .info{flex:1;min-width:0;display:flex;flex-direction:column}
 .card .info span{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .x{background:none;color:var(--muted);padding:6px}
 .avatar{width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none;background:var(--accent);color:#fff;
   display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600}
 .avatar.sm{width:36px;height:36px;font-size:15px}
-.form{background:var(--card);border-radius:14px;padding:14px;margin-top:18px;display:flex;flex-direction:column;gap:10px}
-.form h2{font-size:16px;margin:0}
-#preview{width:90px;height:90px;border-radius:12px;object-fit:cover}
-.msg{max-width:80%;padding:10px 13px;border-radius:16px;margin-bottom:8px;white-space:pre-wrap;word-wrap:break-word;line-height:1.4}
-.msg.user{margin-left:auto;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
-.msg.assistant{background:var(--theirs);border-bottom-left-radius:4px}
-.inputbar{display:flex;gap:8px;padding:10px 12px;background:var(--card);border-top:1px solid #0001}
-.inputbar textarea{min-height:44px;max-height:120px;flex:1}
+.msg{max-width:82%;padding:10px 13px;border-radius:18px;margin-bottom:8px;white-space:pre-wrap;word-wrap:break-word;line-height:1.4}
+.msg.user{margin-left:auto;background:var(--accent);color:#fff;border-bottom-right-radius:5px}
+.msg.assistant{background:var(--theirs);border-bottom-left-radius:5px}
+.inputbar{display:flex;gap:8px;padding:10px 12px;background:var(--card);border-top:1px solid var(--line)}
+.inputbar textarea{min-height:44px;max-height:120px;flex:1;resize:none}
+.inputbar button{border-radius:12px;padding:0 18px}
+.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:16px}
+.sheet{background:var(--card);border-radius:18px;padding:18px;width:100%;max-width:420px;max-height:90%;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.sheet h2{margin:0;font-size:18px}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+#preview{width:96px;height:96px;border-radius:14px;object-fit:cover;align-self:center}
+#status{font-size:14px;min-height:20px}
 </style>
 </head>
 <body>
 
-<div id="list" class="screen">
-  <header><h1>Персонажи</h1><button class="ghost" onclick="toggleSettings()">Ключ</button></header>
-  <div class="content">
-    <div class="form" id="settings" hidden>
-      <h2>API-ключ Claude</h2>
-      <input id="apikey" type="password" placeholder="sk-ant-...">
-      <button onclick="saveKey()">Сохранить ключ</button>
-      <p class="muted">Ключ хранится только в этом телефоне.</p>
-    </div>
-    <div id="cards"></div>
-    <div class="form">
-      <h2>Новый персонаж</h2>
-      <input id="name" placeholder="Имя">
-      <textarea id="traits" placeholder="Описание характера: как говорит, что любит, как реагирует"></textarea>
-      <input id="photo" type="file" accept="image/*">
-      <img id="preview" hidden alt="">
+<div id="app" class="screen"></div>
+
+<div id="chat" class="screen" hidden>
+  <div class="bar">
+    <button class="ghost" onclick="closeChat()">‹ Назад</button>
+    <span id="cavatar"></span>
+    <h1 id="cname"></h1>
+  </div>
+  <div class="scroll" id="msgs"></div>
+  <div class="inputbar">
+    <textarea id="draft" rows="1" placeholder="Сообщение"></textarea>
+    <button id="sendBtn" onclick="sendMsg()">→</button>
+  </div>
+</div>
+
+<div id="formModal" class="modal" hidden>
+  <div class="sheet">
+    <h2>Новый персонаж</h2>
+    <input id="fName" placeholder="Имя">
+    <textarea id="fTraits" placeholder="Характер: как говорит, что любит, как реагирует на людей"></textarea>
+    <input id="fPhoto" type="file" accept="image/*">
+    <img id="preview" hidden alt="">
+    <div class="row">
+      <button class="ghost" onclick="closeForm()">Отмена</button>
       <button onclick="addChar()">Создать</button>
     </div>
   </div>
 </div>
 
-<div id="chat" class="screen" hidden>
-  <header>
-    <button class="ghost" onclick="show('list')">‹ Назад</button>
-    <span id="cavatar"></span>
-    <h1 id="cname"></h1>
-  </header>
-  <div class="content" id="msgs"></div>
-  <div class="inputbar">
-    <textarea id="input" placeholder="Сообщение" rows="1"></textarea>
-    <button id="sendBtn" onclick="sendMsg()">→</button>
+<div id="setModal" class="modal" hidden>
+  <div class="sheet">
+    <h2>Ключ Groq</h2>
+    <p class="muted">Ключ начинается с gsk_. Хранится только в этом телефоне.</p>
+    <input id="keyInput" type="password" placeholder="gsk_...">
+    <div class="row">
+      <button class="ghost" onclick="closeSettings()">Закрыть</button>
+      <button onclick="saveKey()">Сохранить</button>
+    </div>
+    <button class="small" onclick="testKey()">Проверить ключ</button>
+    <div id="status"></div>
+    <p class="muted">Версия: <b>Groq v3</b></p>
   </div>
 </div>
 
 <script>
-const KEY = "rp_v1";
-let state = load();
-let view = "list", cur = null, pendingPhoto = "", busy = false;
+const VERSION = "Groq v3";
+const MODEL = "llama-3.1-8b-instant";
+const STORE = "rp_app_v3";
+
+let db = load();
+let ui = {chatId: null, draft: "", busy: false};
 
 function load(){
-  try { return JSON.parse(localStorage.getItem(KEY)) || {characters:[], chats:{}}; }
-  catch(e){ return {characters:[], chats:{}}; }
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE));
+    if (d && Array.isArray(d.characters)) return d;
+  } catch (e) {}
+  return {characters: [], chats: {}, key: ""};
 }
 function save(){
-  try { localStorage.setItem(KEY, JSON.stringify(state)); }
-  catch(e){ alert("Не удалось сохранить: мало места в браузере. Удали часть персонажей с фото."); }
+  try { localStorage.setItem(STORE, JSON.stringify(db)); return true; }
+  catch (e) { alert("Мало места в браузере. Удали часть персонажей с фото."); return false; }
 }
 function $(id){ return document.getElementById(id); }
-function esc(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-function newId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function esc(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function newId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function findChar(id){ return db.characters.find(c => c.id === id); }
 
 function avatar(c, cls){
-  if (c.photo) return `<img class="avatar ${cls||''}" src="${c.photo}" alt="">`;
-  return `<div class="avatar ${cls||''}">${esc(c.name.charAt(0).toUpperCase())}</div>`;
+  if (c.photo) return `<img class="avatar ${cls || ""}" src="${c.photo}" alt="">`;
+  return `<div class="avatar ${cls || ""}">${esc(c.name.charAt(0).toUpperCase())}</div>`;
 }
 
-// Сжимаем фото, чтобы оно не занимало много места в хранилище
 function compress(file){
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
       const img = new Image();
       img.onload = () => {
         const max = 384, s = Math.min(1, max / Math.max(img.width, img.height));
-        const c = document.createElement("canvas");
-        c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
-        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-        res(c.toDataURL("image/jpeg", 0.85));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * s);
+        canvas.height = Math.round(img.height * s);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
       };
-      img.onerror = rej;
-      img.src = r.result;
+      img.onerror = reject;
+      img.src = reader.result;
     };
-    r.onerror = rej;
-    r.readAsDataURL(file);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 
-$("photo").onchange = async e => {
+// ---------- Список персонажей ----------
+let pendingPhoto = "";
+
+function render(){
+  const cards = db.characters.map(c => `
+    <div class="card" onclick="openChat('${c.id}')">
+      ${avatar(c)}
+      <div class="info"><b>${esc(c.name)}</b><span>${esc(c.traits)}</span></div>
+      <button class="x" onclick="event.stopPropagation();delChar('${c.id}')">✕</button>
+    </div>`).join("");
+  $("app").innerHTML = `
+    <div class="bar"><h1>Персонажи</h1><button class="ghost" onclick="openSettings()">⚙</button></div>
+    <div class="scroll">
+      ${cards || '<p class="muted center">Персонажей пока нет. Нажми «+ Новый персонаж».</p>'}
+      <button class="wide" onclick="showForm()">+ Новый персонаж</button>
+    </div>`;
+}
+
+function showForm(){
+  pendingPhoto = "";
+  $("fName").value = ""; $("fTraits").value = ""; $("fPhoto").value = "";
+  $("preview").hidden = true; $("preview").removeAttribute("src");
+  $("formModal").hidden = false;
+}
+function closeForm(){ $("formModal").hidden = true; }
+
+$("fPhoto").addEventListener("change", async e => {
   const f = e.target.files[0];
   if (!f) return;
   pendingPhoto = await compress(f);
   $("preview").src = pendingPhoto;
   $("preview").hidden = false;
-};
-
-function show(v, id){
-  view = v; cur = id || null;
-  $("list").hidden = v !== "list";
-  $("chat").hidden = v !== "chat";
-  if (v === "list") renderList(); else renderChat();
-}
-
-function renderList(){
-  $("cards").innerHTML = state.characters.length
-    ? state.characters.map(c => `
-      <div class="card" onclick="show('chat','${c.id}')">
-        ${avatar(c)}
-        <div class="info"><b>${esc(c.name)}</b><span>${esc(c.traits)}</span></div>
-        <button class="del" onclick="event.stopPropagation();removeChar('${c.id}')">✕</button>
-      </div>`).join("")
-    : '<p class="muted">Пока нет персонажей. Создай первого ниже.</p>';
-}
+});
 
 function addChar(){
-  const name = $("name").value.trim(), traits = $("traits").value.trim();
-  if (!name || !traits){ alert("Заполни имя и описание характера"); return; }
+  const name = $("fName").value.trim();
+  const traits = $("fTraits").value.trim();
+  if (!name || !traits){ alert("Заполни имя и характер"); return; }
   const c = {id: newId(), name, traits, photo: pendingPhoto};
-  state.characters.push(c);
-  state.chats[c.id] = [];
-  save();
-  $("name").value = ""; $("traits").value = ""; $("photo").value = "";
-  pendingPhoto = ""; $("preview").hidden = true; $("preview").removeAttribute("src");
-  renderList();
+  db.characters.push(c);
+  db.chats[c.id] = [];
+  if (!save()) return;
+  closeForm();
+  render();
 }
 
-function removeChar(id){
-  const c = state.characters.find(x => x.id === id);
-  if (!c || !confirm(`Удалить «${c.name}» и всю переписку?`)) return;
-  state.characters = state.characters.filter(x => x.id !== id);
-  delete state.chats[id];
+function delChar(id){
+  const c = findChar(id);
+  if (!c || !confirm(`Удалить «${c.name}» и переписку?`)) return;
+  db.characters = db.characters.filter(x => x.id !== id);
+  delete db.chats[id];
   save();
-  renderList();
+  render();
+}
+
+// ---------- Чат ----------
+function openChat(id){
+  ui.chatId = id;
+  $("app").hidden = true;
+  $("chat").hidden = false;
+  renderChat();
+  $("draft").value = "";
+}
+
+function closeChat(){
+  ui.chatId = null;
+  $("chat").hidden = true;
+  $("app").hidden = false;
+  render();
 }
 
 function renderChat(){
-  const c = state.characters.find(x => x.id === cur);
-  if (!c){ show("list"); return; }
+  const c = findChar(ui.chatId);
+  if (!c){ closeChat(); return; }
   $("cavatar").innerHTML = avatar(c, "sm");
   $("cname").textContent = c.name;
-  const msgs = state.chats[c.id] || [];
+  const msgs = db.chats[c.id] || [];
   $("msgs").innerHTML = msgs.length
     ? msgs.map(m => `<div class="msg ${m.role}">${esc(m.text)}</div>`).join("")
-    : '<p class="muted">Напиши первое сообщение.</p>';
+    : '<p class="muted center">Напиши первое сообщение.</p>';
   $("msgs").scrollTop = $("msgs").scrollHeight;
 }
 
-// Системная инструкция из описания характера. Пригодится при подключении модели.
-function buildPrompt(c){
-  return `Ты играешь роль персонажа по имени ${c.name}. Описание характера: ${c.traits}. ` +
-         `Всегда оставайся в роли, говори от первого лица и сохраняй характер из описания.`;
-}
+$("draft").addEventListener("input", e => { ui.draft = e.target.value; });
 
-// ЗАГЛУШКА. Сюда подключим вызов модели: системная инструкция = buildPrompt(c), история = hist.
-async function getReply(c, hist){
-  const key = localStorage.getItem("rp_apikey");
-  if (!key) return "Сначала введи API-ключ: кнопка «Ключ» на экране персонажей.";
-  const messages = hist.map(m => ({role: m.role, content: m.text}));
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true"
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-5-5",
-        max_tokens: 600,
-        system: buildPrompt(c),
-        messages
-      })
-    });
-    const data = await res.json();
-    if (!res.ok) return "Ошибка: " + ((data.error && data.error.message) || res.status);
-    return data.content.map(i => i.text || "").join("").trim() || "(пустой ответ)";
-  } catch (e) {
-    return "Не удалось связаться с моделью. Проверь интернет.";
-  }
+function buildPrompt(c){
+  return `Ты играешь роль персонажа по имени ${c.name}. Характер и манера речи: ${c.traits}. ` +
+    `Оставайся в роли, говори от первого лица, отвечай коротко (1–4 предложения) и на языке собеседника.`;
 }
 
 async function sendMsg(){
-  if (busy) return;
-  const text = $("input").value.trim();
-  const c = state.characters.find(x => x.id === cur);
-  if (!text || !c) return;
-  busy = true; $("sendBtn").disabled = true;
-  const hist = state.chats[c.id];
+  const c = findChar(ui.chatId);
+  const text = $("draft").value.trim();
+  if (!c || !text || ui.busy) return;
+
+  const hist = db.chats[c.id] || (db.chats[c.id] = []);
   hist.push({role: "user", text});
-  $("input").value = "";
-  save(); renderChat();
+  $("draft").value = "";
+  save();
+  renderChat();
+
+  ui.busy = true;
+  $("sendBtn").disabled = true;
+  const reply = await getReply(c, hist.slice());
+  hist.push({role: "assistant", text: reply});
+  save();
+  ui.busy = false;
+  $("sendBtn").disabled = false;
+  if (ui.chatId === c.id) renderChat();
+}
+
+async function getReply(c, hist){
+  const key = checkKey();
+  if (key.error) return "⚠ " + key.error;
+  const messages = [{role: "system", content: buildPrompt(c)}]
+    .concat(hist.map(m => ({role: m.role, content: m.text})));
   try {
-    const reply = await getReply(c, hist.slice());
-    hist.push({role: "assistant", text: reply});
-    save();
-  } finally {
-    busy = false; $("sendBtn").disabled = false;
-    if (cur === c.id) renderChat();
+    return await callGroq(key.value, messages, 400);
+  } catch (e) {
+    return "⚠ " + e.message;
   }
 }
 
-show("list");
-function toggleSettings(){
-  const s = $("settings");
-  s.hidden = !s.hidden;
-  $("apikey").value = localStorage.getItem("rp_apikey") || "";
+// ---------- Ключ и запрос к Groq ----------
+function checkKey(){
+  const k = (db.key || "").trim();
+  if (!k) return {error: "Ключ не введён. Нажми ⚙ и вставь ключ Groq."};
+  if (!k.startsWith("gsk_")) return {error: "Сохранён неверный ключ. Ключ Groq начинается с gsk_, а не sk-ant. Открой ⚙ и вставь ключ с console.groq.com."};
+  return {value: k};
 }
+
+async function callGroq(key, messages, maxTokens){
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {"Content-Type": "application/json", "Authorization": "Bearer " + key},
+    body: JSON.stringify({model: MODEL, messages, max_tokens: maxTokens})
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok){
+    const msg = (data.error && data.error.message) || ("код ошибки " + res.status);
+    throw new Error(msg);
+  }
+  const text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  return (text || "").trim() || "(пустой ответ)";
+}
+
+function openSettings(){
+  $("keyInput").value = db.key || "";
+  $("status").textContent = "";
+  $("setModal").hidden = false;
+}
+function closeSettings(){ $("setModal").hidden = true; }
+
 function saveKey(){
-  const k = $("apikey").value.trim();
-  if (!k){ alert("Введи ключ"); return; }
-  localStorage.setItem("rp_apikey", k);
-  alert("Ключ сохранён");
-  $("settings").hidden = true;
+  db.key = $("keyInput").value.trim();
+  if (!save()) return;
+  $("status").textContent = db.key ? "Ключ сохранён." : "Ключ удалён.";
 }
+
+async function testKey(){
+  const key = checkKey();
+  if (key.error){ $("status").textContent = "⚠ " + key.error; return; }
+  $("status").textContent = "Проверяю...";
+  try {
+    const answer = await callGroq(key.value, [{role: "user", content: "Ответь одним словом: работает"}], 10);
+    $("status").textContent = "✅ Ключ работает. Ответ модели: " + answer;
+  } catch (e) {
+    $("status").textContent = "⚠ Ошибка: " + e.message;
+  }
+}
+
+render();
 </script>
 </body>
 </html>
