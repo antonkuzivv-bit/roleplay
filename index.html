@@ -25,7 +25,7 @@ button:disabled{opacity:.5}
 button.ghost{background:none;color:var(--accent);padding:8px}
 button.wide{width:100%;margin-top:6px}
 button.small{padding:6px 10px;font-size:14px}
-input,textarea{font:inherit;width:100%;padding:11px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--text)}
+input,textarea,select{font:inherit;width:100%;padding:11px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--text)}
 textarea{min-height:90px;resize:vertical}
 .muted{color:var(--muted);font-size:14px}
 .center{text-align:center;margin-top:40px}
@@ -73,6 +73,13 @@ textarea{min-height:90px;resize:vertical}
     <h2>Новый персонаж</h2>
     <input id="fName" placeholder="Имя">
     <textarea id="fTraits" placeholder="Характер: как говорит, что любит, как реагирует на людей"></textarea>
+    <input id="fLocation" placeholder="Локация (город, место)">
+    <input id="fAge" type="number" min="18" max="99" placeholder="Возраст (от 18)">
+    <select id="fTone">
+      <option value="calm">Тон: обычный</option>
+      <option value="friendly">Тон: дружеский</option>
+      <option value="romantic">Тон: романтичный, без пошлости</option>
+    </select>
     <input id="fPhoto" type="file" accept="image/*">
     <img id="preview" hidden alt="">
     <div class="row">
@@ -156,7 +163,7 @@ function render(){
   const cards = db.characters.map(c => `
     <div class="card" onclick="openChat('${c.id}')">
       ${avatar(c)}
-      <div class="info"><b>${esc(c.name)}</b><span>${esc(c.traits)}</span></div>
+      <div class="info"><b>${esc(c.name)}${c.age ? ", " + c.age : ""}</b><span>${esc(c.location || c.traits)}</span></div>
       <button class="x" onclick="event.stopPropagation();delChar('${c.id}')">✕</button>
     </div>`).join("");
   $("app").innerHTML = `
@@ -170,6 +177,7 @@ function render(){
 function showForm(){
   pendingPhoto = "";
   $("fName").value = ""; $("fTraits").value = ""; $("fPhoto").value = "";
+  $("fLocation").value = ""; $("fAge").value = ""; $("fTone").value = "calm";
   $("preview").hidden = true; $("preview").removeAttribute("src");
   $("formModal").hidden = false;
 }
@@ -187,7 +195,11 @@ function addChar(){
   const name = $("fName").value.trim();
   const traits = $("fTraits").value.trim();
   if (!name || !traits){ alert("Заполни имя и характер"); return; }
-  const c = {id: newId(), name, traits, photo: pendingPhoto};
+  const location = $("fLocation").value.trim();
+  const age = parseInt($("fAge").value, 10);
+  const tone = $("fTone").value;
+  if (!age || age < 18){ alert("Возраст персонажа должен быть 18 лет или больше"); return; }
+  const c = {id: newId(), name, traits, photo: pendingPhoto, location, age, tone};
   db.characters.push(c);
   db.chats[c.id] = [];
   if (!save()) return;
@@ -235,7 +247,16 @@ function renderChat(){
 $("draft").addEventListener("input", e => { ui.draft = e.target.value; });
 
 function buildPrompt(c){
+  const tones = {
+    calm: "Общение спокойное и обычное, без флирта.",
+    friendly: "Общение дружелюбное и тёплое.",
+    romantic: "Можно лёгкий романтический флирт. Никакой пошлости и откровенных описаний."
+  };
+  const facts = [`Возраст: ${c.age || "взрослый"}`];
+  if (c.location) facts.push(`Локация: ${c.location}`);
   return `Ты играешь роль персонажа по имени ${c.name}. Характер и манера речи: ${c.traits}. ` +
+    facts.join(". ") + ". " +
+    (tones[c.tone] || tones.calm) + " " +
     `Оставайся в роли, говори от первого лица, отвечай коротко (1–4 предложения) и на языке собеседника.`;
 }
 
