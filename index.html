@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#5b5bd6">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Ролевой чат</title>
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
@@ -42,8 +46,14 @@ textarea{min-height:90px;resize:vertical}
 <body>
 
 <div id="list" class="screen">
-  <header><h1>Персонажи</h1></header>
+  <header><h1>Персонажи</h1><button class="ghost" onclick="toggleSettings()">Ключ</button></header>
   <div class="content">
+    <div class="form" id="settings" hidden>
+      <h2>API-ключ Claude</h2>
+      <input id="apikey" type="password" placeholder="sk-ant-...">
+      <button onclick="saveKey()">Сохранить ключ</button>
+      <p class="muted">Ключ хранится только в этом телефоне.</p>
+    </div>
     <div id="cards"></div>
     <div class="form">
       <h2>Новый персонаж</h2>
@@ -179,8 +189,31 @@ function buildPrompt(c){
 
 // ЗАГЛУШКА. Сюда подключим вызов модели: системная инструкция = buildPrompt(c), история = hist.
 async function getReply(c, hist){
-  await new Promise(r => setTimeout(r, 400));
-  return "(заглушка) Здесь появится ответ персонажа, когда подключим модель.";
+  const key = localStorage.getItem("rp_apikey");
+  if (!key) return "Сначала введи API-ключ: кнопка «Ключ» на экране персонажей.";
+  const messages = hist.map(m => ({role: m.role, content: m.text}));
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-5-5",
+        max_tokens: 600,
+        system: buildPrompt(c),
+        messages
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) return "Ошибка: " + ((data.error && data.error.message) || res.status);
+    return data.content.map(i => i.text || "").join("").trim() || "(пустой ответ)";
+  } catch (e) {
+    return "Не удалось связаться с моделью. Проверь интернет.";
+  }
 }
 
 async function sendMsg(){
@@ -204,6 +237,18 @@ async function sendMsg(){
 }
 
 show("list");
+function toggleSettings(){
+  const s = $("settings");
+  s.hidden = !s.hidden;
+  $("apikey").value = localStorage.getItem("rp_apikey") || "";
+}
+function saveKey(){
+  const k = $("apikey").value.trim();
+  if (!k){ alert("Введи ключ"); return; }
+  localStorage.setItem("rp_apikey", k);
+  alert("Ключ сохранён");
+  $("settings").hidden = true;
+}
 </script>
 </body>
 </html>
